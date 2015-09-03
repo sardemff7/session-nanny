@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=net.sardemff7.SessionNanny
+Exec=@libexecdir@/session-nanny
+SystemdService=session-nanny.service

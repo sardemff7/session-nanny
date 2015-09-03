@@ -1,0 +1,6 @@
+[Unit]
+Description=session-nanny
+
+[Service]
+BusName=net.sardemff7.SessionNanny
+ExecStart=@libexecdir@/session-nanny

@@ -1,0 +1,9 @@
+
+/session-nanny
+/session-baby
+
+/src/config.h
+/src/config.h.in
+*.c
+*.service
+
