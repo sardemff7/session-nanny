@@ -252,7 +252,7 @@ namespace SessionNanny
             if ( this.tmux )
             {
                 string args[] = {
-                    "tmux", "set-environment", "-g", "-u", ""
+                    "tmux", "set-environment", null, "-u", ""
                 };
                 i = GLib.HashTableIter<string, string>(environment);
                 while ( i.next(out name, out val) )
@@ -264,7 +264,10 @@ namespace SessionNanny
                         args[3] = name;
                         args[4] = val;
                     }
-                    GLib.debug("tmux set-environment -g %s %s", args[3], args[4]);
+                    GLib.debug("tmux set-environment %s %s", args[3], args[4]);
+                    args[2] = "-t0";
+                    this.exec(args);
+                    args[2] = "-g";
                     this.exec(args);
                 }
             }
