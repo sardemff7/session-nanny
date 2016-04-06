@@ -63,7 +63,10 @@ namespace SessionNanny
                 return;
 
             GLib.debug("[Session %s] %s", this.session.id, this.session.active ? "Active" : "Inactive");
-            this.nanny.active_session = this.session.active ? this : null;
+            if ( this.session.active )
+                this.nanny.active_session = this;
+            else if ( this.nanny.active_session == this )
+                this.nanny.active_session = null;
         }
 
         public GLib.VariantBuilder
