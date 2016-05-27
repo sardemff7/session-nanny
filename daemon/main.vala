@@ -53,18 +53,16 @@ namespace SessionNanny
         public bool active { get { return this.session.active; } }
 
         public
-        Session(string session_path, string type, Nanny nanny) throws GLib.IOError
+        Session(Nanny nanny, string session_path, string type) throws GLib.IOError
         {
+            this.nanny = nanny;
             this.session_path = session_path;
             this.session_type = type;
-            this.nanny = nanny;
 
             this.session = GLib.Bus.get_proxy_sync(BusType.SYSTEM, Logind.bus_name, session_path);
             this.session.g_properties_changed.connect(this.session_properties_change);
 
             GLib.debug("[Session %s] Added%s", this.session.id, this.session.active ? " (active)" : "");
-
-            this.check_tmux_file();
         }
 
         private void
@@ -196,6 +194,7 @@ namespace SessionNanny
                 {
                     args[1] = "source-file";
                     args[2] = this.tmux_session_file;
+                    args[3] = null;
 
                     GLib.debug("tmux source-file %s", args[2]);
                     this.exec(args);
@@ -288,7 +287,7 @@ namespace SessionNanny
             {
                 try
                 {
-                    session = new Session(session_path, type, this);
+                    session = new Session(this, session_path, type);
                     this.sessions.insert(session_path, session);
                 }
                 catch ( GLib.IOError e )
