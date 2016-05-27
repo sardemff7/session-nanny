@@ -37,9 +37,9 @@ namespace SessionNanny
     [DBus (name = "net.sardemff7.SessionNanny")]
     interface Nanny : GLib.Object
     {
-        public abstract void update_environment(GLib.ObjectPath session_path, GLib.HashTable<string, string> environment) throws GLib.IOError;
+        public abstract void update_environment(GLib.ObjectPath session_path, string type, GLib.HashTable<string, string> environment) throws GLib.IOError;
         public abstract string get_version() throws GLib.IOError;
-        [DBus (signature = "a{o(ba{ss})}")]
+        [DBus (signature = "a{o(sba{ss})}")]
         public abstract GLib.Variant get_sessions() throws GLib.IOError;
     }
 
@@ -109,12 +109,13 @@ namespace SessionNanny
                     var sessions = nanny.get_sessions();
                     foreach ( var session in sessions )
                     {
+                        unowned string type;
                         unowned string path;
                         bool active;
                         GLib.VariantIter env;
-                        session.get("{&o(ba{ss})}", out path, out active, out env);
+                        session.get("{&o(sba{ss})}", out path, out type, out active, out env);
 
-                        GLib.print("Session %s%s", path, active ? " (active)" : "");
+                        GLib.print("Session [%s] %s%s", type, path, active ? " (active)" : "");
 
                         unowned string @var;
                         unowned string val;
@@ -159,7 +160,8 @@ namespace SessionNanny
                 }
                 foreach ( var @var in args[1:args.length] )
                     add_var(env, @var);
-                nanny.update_environment(session_path, env);
+                unowned string type = GLib.Environment.get_variable("SN_SESSION");
+                nanny.update_environment(session_path, type, env);
             }
             catch ( GLib.IOError e )
             {

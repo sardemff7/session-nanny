@@ -28,6 +28,7 @@ namespace SessionNanny
         private Logind.Session session;
         class Session current = null;
         private string session_path;
+        public string session_type { get; private set; }
 
         private GLib.HashTable<string, string> _environment;
         public GLib.HashTable<string, string> environment
@@ -45,9 +46,10 @@ namespace SessionNanny
         public bool active { get { return this.session.active; } }
 
         public
-        Session(string session_path, Nanny nanny) throws GLib.IOError
+        Session(string session_path, string type, Nanny nanny) throws GLib.IOError
         {
             this.session_path = session_path;
+            this.session_type = type;
             this.nanny = nanny;
 
             this.session = GLib.Bus.get_proxy_sync(BusType.SYSTEM, Logind.bus_name, session_path);
@@ -125,24 +127,24 @@ namespace SessionNanny
                 string args[] = { "eventdctl", "nd", "switch", null, null, null };
                 if ( ! active )
                     args[2] = "stop";
-                else if ( "WAYLAND_DISPLAY" in environment )
+                else switch ( this.session_type )
                 {
+                case "wayland":
                     args[3] = "wayland";
                     args[4] = environment["WAYLAND_DISPLAY"];
-                }
-                else if ( "DISPLAY" in environment )
-                {
+                break;
+                case "x11":
                     args[3] = "xcb";
                     args[4] = environment["DISPLAY"];
-                }
-                else if ( "TTY" in environment )
-                {
+                break;
+                case "tty-linux":
                     args[3] = "fbdev";
                     args[4] = "/dev/fb0";
-                }
-                else
+                break;
+                default:
                     args[2] = "stop";
-
+                break;
+                }
 
                 GLib.debug("eventdctl nd %s %s %s", args[2], ( args[3] != null ) ? args[3] : "", ( args[4] != null ) ? args[4] : "");
                 this.exec(args);
@@ -233,14 +235,14 @@ namespace SessionNanny
         }
 
         public void
-        update_environment(GLib.ObjectPath session_path, GLib.HashTable<string, string> environment)
+        update_environment(GLib.ObjectPath session_path, string type, GLib.HashTable<string, string> environment)
         {
             var session = this.sessions.lookup(session_path);
             if ( session == null )
             {
                 try
                 {
-                    session = new Session(session_path, this);
+                    session = new Session(session_path, type, this);
                     this.sessions.insert(session_path, session);
                 }
                 catch ( GLib.IOError e )
@@ -277,16 +279,16 @@ namespace SessionNanny
             return Config.PACKAGE_VERSION;
         }
 
-        [DBus (signature = "a{o(ba{ss})}")]
+        [DBus (signature = "a{o(sba{ss})}")]
         public GLib.Variant
         get_sessions()
         {
-            var r = new GLib.VariantBuilder((GLib.VariantType) "a{o(ba{ss})}");
+            var r = new GLib.VariantBuilder((GLib.VariantType) "a{o(sba{ss})}");
             var i = GLib.HashTableIter<string, Session>(this.sessions);
             unowned string path;
             Session session;
             while ( i.next(out path, out session) )
-                r.add("{o(ba{ss})}", path, session.active, session.get_environment_as_variant());
+                r.add("{o(sba{ss})}", path, session.session_type, session.active, session.get_environment_as_variant());
             return r.end();
         }
     }
