@@ -122,7 +122,7 @@ namespace SessionNanny
 
             if ( this.nanny.eventd )
             {
-                string args[] = { "eventdctl", "nd", "switch", null, null };
+                string args[] = { "eventdctl", "nd", "switch", null, null, null };
                 if ( ! active )
                     args[2] = "stop";
                 else if ( "WAYLAND_DISPLAY" in environment )
@@ -151,7 +151,7 @@ namespace SessionNanny
             if ( this.nanny.tmux )
             {
                 string args[] = {
-                    "tmux", "set-environment", null, "-u", ""
+                    "tmux", "set-environment", null, "-u", "", null
                 };
                 i = GLib.HashTableIter<string, string>(environment);
                 while ( i.next(out name, out val) )
