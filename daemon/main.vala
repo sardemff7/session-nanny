@@ -29,6 +29,7 @@ namespace SessionNanny
         class Session current = null;
         private string session_path;
         public string session_type { get; private set; }
+        private string tmux_session_file = null;
 
         private GLib.HashTable<string, string> _environment;
         public GLib.HashTable<string, string> environment
@@ -56,6 +57,13 @@ namespace SessionNanny
             this.session.g_properties_changed.connect(this.session_properties_change);
 
             GLib.debug("[Session %s] Added%s", this.session.id, this.session.active ? " (active)" : "");
+
+            if ( this.nanny.tmux )
+            {
+                string file = GLib.Path.build_filename(GLib.Environment.get_user_config_dir(), "tmux", this.session_type);
+                if ( GLib.FileUtils.test(file, GLib.FileTest.IS_REGULAR) )
+                    this.tmux_session_file = file;
+            }
         }
 
         private void
@@ -169,6 +177,14 @@ namespace SessionNanny
                     args[2] = "-t0";
                     this.exec(args);
                     args[2] = "-g";
+                    this.exec(args);
+                }
+                if ( active && ( this.tmux_session_file != null ) )
+                {
+                    args[1] = "source-file";
+                    args[2] = this.tmux_session_file;
+
+                    GLib.debug("tmux source-file %s", args[2]);
                     this.exec(args);
                 }
             }
