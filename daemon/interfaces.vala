@@ -45,12 +45,20 @@ namespace Logind
 {
     public static const string bus_name = "org.freedesktop.login1";
     public static const string object_path = "/org/freedesktop/login1";
+    public static const string self_user_path = "/org/freedesktop/login1/user/self";
 
     [DBus (name = "org.freedesktop.login1.Manager")]
     interface Manager : GLib.DBusProxy
     {
+        public abstract void set_user_linger(uint32 uid, bool linger, bool interactive = false) throws GLib.IOError, GLib.DBusError;
         public signal void session_new(string session_id, GLib.ObjectPath session_path);
         public signal void session_removed(string session_id, GLib.ObjectPath session_path);
+    }
+    [DBus (name = "org.freedesktop.login1.User")]
+    interface User : GLib.DBusProxy
+    {
+        [DBus (name = "Linger")]
+        public abstract bool linger { get; private set; }
     }
 
     [DBus (name = "org.freedesktop.login1.Session")]

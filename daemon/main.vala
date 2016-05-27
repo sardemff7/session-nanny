@@ -209,6 +209,7 @@ namespace SessionNanny
         private DBus.DBus dbus;
         private Systemd.Manager systemd;
         private Logind.Manager logind;
+        private Logind.User user;
         [DBus (visible = false)]
         public bool eventd { get; private set; default = false; }
         [DBus (visible = false)]
@@ -222,6 +223,22 @@ namespace SessionNanny
             this.dbus = GLib.Bus.get_proxy_sync(BusType.SESSION, DBus.bus_name, DBus.object_path);
             this.systemd = GLib.Bus.get_proxy_sync(BusType.SESSION, Systemd.bus_name, Systemd.object_path);
             this.logind = GLib.Bus.get_proxy_sync(BusType.SYSTEM, Logind.bus_name, Logind.object_path);
+            this.user = GLib.Bus.get_proxy_sync(BusType.SYSTEM, Logind.bus_name, Logind.self_user_path);
+            if ( ! this.user.linger )
+            {
+                try
+                {
+                    this.logind.set_user_linger(-1, true);
+                }
+                catch ( GLib.IOError e )
+                {
+                    GLib.warning("Could not enable lingering: %s", e.message);
+                }
+                catch ( GLib.DBusError e )
+                {
+                    GLib.warning("Could not enable lingering: %s", e.message);
+                }
+            }
 
             string path;
             path = GLib.Path.build_filename(GLib.Environment.get_user_runtime_dir(), "eventd", "private");
