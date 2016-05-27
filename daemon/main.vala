@@ -28,16 +28,22 @@ namespace SessionNanny
         private Logind.Session session;
         class Session current = null;
         private string session_path;
-        public string session_type { get; private set; }
+        private string _session_type;
+        public string session_type
+        {
+            get { return this._session_type; }
+            set
+            {
+                this._session_type = value;
+                this.check_tmux_file();
+            }
+        }
         private string tmux_session_file = null;
 
         private GLib.HashTable<string, string> _environment;
         public GLib.HashTable<string, string> environment
         {
-            get
-            {
-                return this._environment;
-            }
+            get { return this._environment; }
             set
             {
                 this._environment = value;
@@ -58,12 +64,19 @@ namespace SessionNanny
 
             GLib.debug("[Session %s] Added%s", this.session.id, this.session.active ? " (active)" : "");
 
-            if ( this.nanny.tmux )
-            {
-                string file = GLib.Path.build_filename(GLib.Environment.get_user_config_dir(), "tmux", this.session_type);
-                if ( GLib.FileUtils.test(file, GLib.FileTest.IS_REGULAR) )
-                    this.tmux_session_file = file;
-            }
+            this.check_tmux_file();
+        }
+
+        private void
+        check_tmux_file()
+        {
+            if ( ! this.nanny.tmux )
+                return;
+            string file = GLib.Path.build_filename(GLib.Environment.get_user_config_dir(), "tmux", this.session_type);
+            if ( GLib.FileUtils.test(file, GLib.FileTest.IS_REGULAR) )
+                this.tmux_session_file = file;
+            else
+                this.tmux_session_file = null;
         }
 
         private void
@@ -284,6 +297,8 @@ namespace SessionNanny
                     return;
                 }
             }
+            else if ( session.session_type != type )
+                session.session_type = type;
 
             session.environment = environment;
             if ( session.active )
