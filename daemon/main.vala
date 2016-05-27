@@ -26,6 +26,7 @@ namespace SessionNanny
     {
         private Nanny nanny;
         private Logind.Session session;
+        class Session current = null;
         private string session_path;
 
         private GLib.HashTable<string, string> _environment;
@@ -63,10 +64,112 @@ namespace SessionNanny
                 return;
 
             GLib.debug("[Session %s] %s", this.session.id, this.session.active ? "Active" : "Inactive");
-            if ( this.session.active )
-                this.nanny.active_session = this;
-            else if ( this.nanny.active_session == this )
-                this.nanny.active_session = null;
+            if ( this.session.active || ( this.current == this ) )
+                this.push(this.session.active);
+        }
+
+        public void
+        remove()
+        {
+            if ( this.current == this )
+                this.push(false);
+        }
+
+        private void
+        exec(string[] args)
+        {
+            try
+            {
+                GLib.Process.spawn_async(null, args, null, GLib.SpawnFlags.SEARCH_PATH, null, null);
+            }
+            catch ( GLib.SpawnError e ) {}
+        }
+
+        public void
+        push(bool active)
+        {
+            if ( active && ( this.current != null ) )
+                this.current.push(false);
+            this.current = active ? this : null;
+
+            GLib.HashTable<string, string> dbus_env;
+            string[] set_env = {};
+            string[] unset_env = {};
+
+            var i = GLib.HashTableIter<string, string>(environment);
+            unowned string name;
+            unowned string val;
+            if ( ! this.session.active )
+            {
+                dbus_env = new GLib.HashTable<string, string>(GLib.str_hash, GLib.str_equal);
+                while ( i.next(out name, null) )
+                {
+                    unset_env += name;
+                    dbus_env.insert(name, "");
+                }
+            }
+            else
+            {
+                dbus_env = environment;
+                while ( i.next(out name, out val) )
+                {
+                    GLib.debug("    %-20s = %s", name, val);
+                    set_env += name + "=" + val;
+                }
+            }
+
+            this.nanny.push(dbus_env, unset_env, set_env);
+
+            if ( this.nanny.eventd )
+            {
+                string args[] = { "eventdctl", "nd", "switch", null, null };
+                if ( ! active )
+                    args[2] = "stop";
+                else if ( "WAYLAND_DISPLAY" in environment )
+                {
+                    args[3] = "wayland";
+                    args[4] = environment["WAYLAND_DISPLAY"];
+                }
+                else if ( "DISPLAY" in environment )
+                {
+                    args[3] = "xcb";
+                    args[4] = environment["DISPLAY"];
+                }
+                else if ( "TTY" in environment )
+                {
+                    args[3] = "fbdev";
+                    args[4] = "/dev/fb0";
+                }
+                else
+                    args[2] = "stop";
+
+
+                GLib.debug("eventdctl nd %s %s %s", args[2], ( args[3] != null ) ? args[3] : "", ( args[4] != null ) ? args[4] : "");
+                this.exec(args);
+            }
+
+            if ( this.nanny.tmux )
+            {
+                string args[] = {
+                    "tmux", "set-environment", null, "-u", ""
+                };
+                i = GLib.HashTableIter<string, string>(environment);
+                while ( i.next(out name, out val) )
+                {
+                    if ( ! active )
+                        args[4] = name;
+                    else
+                    {
+                        args[3] = name;
+                        args[4] = val;
+                    }
+                    GLib.debug("tmux set-environment %s %s", args[3], args[4]);
+                    args[2] = "-t0";
+                    this.exec(args);
+                    args[2] = "-g";
+                    this.exec(args);
+                }
+            }
         }
 
         public GLib.VariantBuilder
@@ -88,26 +191,11 @@ namespace SessionNanny
         private DBus.DBus dbus;
         private Systemd.Manager systemd;
         private Logind.Manager logind;
-        private bool eventd = false;
-        private bool tmux = false;
-        private GLib.HashTable<string, Session> sessions;
-        private Session _active_session;
         [DBus (visible = false)]
-        public Session active_session
-        {
-            get
-            {
-                return this._active_session;
-            }
-            set
-            {
-                if ( value == null )
-                    this.push(this._active_session.environment, false);
-                else
-                    this.push(value.environment, true);
-                this._active_session = value;
-            }
-        }
+        public bool eventd { get; private set; default = false; }
+        [DBus (visible = false)]
+        public bool tmux { get; private set; default = false; }
+        private GLib.HashTable<string, Session> sessions;
 
         [DBus (visible = false)]
         public
@@ -139,9 +227,8 @@ namespace SessionNanny
         session_removed(string session_id, GLib.ObjectPath session_path)
         {
             var session = this.sessions[session_path];
-            if ( session == this.active_session )
-                this.active_session = null;
             this.sessions.remove(session_path);
+            session.remove();
             GLib.debug("[Session %s] Removed", session_id);
         }
 
@@ -162,55 +249,16 @@ namespace SessionNanny
                     return;
                 }
             }
-            else if ( session.active && ( session == this.active_session ) )
-                /* Clean the env before we forget about what to remove */
-                this.active_session = null;
 
             session.environment = environment;
-
-            if ( ( this.active_session == null ) && session.active )
-                this.active_session = session;
+            if ( session.active )
+                session.push(true);
         }
 
-        private void
-        exec(string[] args)
+        [DBus (visible = false)]
+        public void
+        push(GLib.HashTable<string, string> dbus_env, string[] unset_env, string[] set_env)
         {
-            try
-            {
-                GLib.Process.spawn_async(null, args, null, GLib.SpawnFlags.SEARCH_PATH, null, null);
-            }
-            catch ( GLib.SpawnError e ) {}
-        }
-
-        private void
-        push(owned GLib.HashTable<string, string> environment, bool active)
-        {
-            GLib.HashTable<string, string> dbus_env;
-            string[] set_env = {};
-            string[] unset_env = {};
-
-            var i = GLib.HashTableIter<string, string>(environment);
-            unowned string name;
-            unowned string val;
-            if ( ! active )
-            {
-                dbus_env = new GLib.HashTable<string, string>(GLib.str_hash, GLib.str_equal);
-                while ( i.next(out name, null) )
-                {
-                    unset_env += name;
-                    dbus_env.insert(name, "");
-                }
-            }
-            else
-            {
-                dbus_env = environment;
-                while ( i.next(out name, out val) )
-                {
-                    GLib.debug("    %-20s = %s", name, val);
-                    set_env += name + "=" + val;
-                }
-            }
-
             try
             {
                 this.dbus.update_activation_environment(dbus_env);
@@ -221,56 +269,6 @@ namespace SessionNanny
                 this.systemd.unset_and_set_environment(unset_env, set_env);
             }
             catch ( GLib.IOError e ) {}
-
-            if ( this.eventd )
-            {
-                string args[] = { "eventdctl", "nd", "switch", null, null };
-                if ( ! active )
-                    args[2] = "stop";
-                else if ( "WAYLAND_DISPLAY" in environment )
-                {
-                    args[3] = "wayland";
-                    args[4] = environment["WAYLAND_DISPLAY"];
-                }
-                else if ( "DISPLAY" in environment )
-                {
-                    args[3] = "xcb";
-                    args[4] = environment["DISPLAY"];
-                }
-                else if ( "TTY" in environment )
-                {
-                    args[3] = "fbdev";
-                    args[4] = "/dev/fb0";
-                }
-                else
-                    args[2] = "stop";
-
-                GLib.debug("eventdctl nd %s %s %s", args[2], ( args[3] != null ) ? args[3] : "", ( args[4] != null ) ? args[4] : "");
-                this.exec(args);
-            }
-
-            if ( this.tmux )
-            {
-                string args[] = {
-                    "tmux", "set-environment", null, "-u", ""
-                };
-                i = GLib.HashTableIter<string, string>(environment);
-                while ( i.next(out name, out val) )
-                {
-                    if ( ! active )
-                        args[4] = name;
-                    else
-                    {
-                        args[3] = name;
-                        args[4] = val;
-                    }
-                    GLib.debug("tmux set-environment %s %s", args[3], args[4]);
-                    args[2] = "-t0";
-                    this.exec(args);
-                    args[2] = "-g";
-                    this.exec(args);
-                }
-            }
         }
 
         public string
