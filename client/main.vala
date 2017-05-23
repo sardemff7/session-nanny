@@ -48,9 +48,14 @@ namespace SessionNanny
         public static inline void
         add_var(GLib.HashTable<string, string> env, string @var)
         {
+            var names = @var.split(":", 2);
+            @var = names[0];
+            var target_var = names[0];
+            if ( names.length > 1 )
+                target_var = names[1];
             var val = GLib.Environment.get_variable(@var);
             if ( val != null )
-                env.insert(@var, val);
+                env.insert(target_var, val);
         }
         private static bool display = false;
         private static bool show_version = false;
@@ -63,7 +68,7 @@ namespace SessionNanny
         public static int
         main(string[] args)
         {
-            var option_context = new GLib.OptionContext(" [VARIABLE...] - Get session-nanny something to take care of");
+            var option_context = new GLib.OptionContext(" [VARIABLE[:TARGET_VARIABLE]...] - Get session-nanny something to take care of");
             option_context.add_main_entries(options, SessionNanny.Config.GETTEXT_PACKAGE);
             try
             {
