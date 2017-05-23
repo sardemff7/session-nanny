@@ -19,8 +19,8 @@
 
 namespace DBus
 {
-    public static const string bus_name = "org.freedesktop.DBus";
-    public static const string object_path = "/org/freedesktop/DBus";
+    public const string bus_name = "org.freedesktop.DBus";
+    public const string object_path = "/org/freedesktop/DBus";
 
     [DBus (name = "org.freedesktop.DBus")]
     interface DBus : GLib.DBusProxy
@@ -31,8 +31,8 @@ namespace DBus
 
 namespace Systemd
 {
-    public static const string bus_name = "org.freedesktop.systemd1";
-    public static const string object_path = "/org/freedesktop/systemd1";
+    public const string bus_name = "org.freedesktop.systemd1";
+    public const string object_path = "/org/freedesktop/systemd1";
 
     [DBus (name = "org.freedesktop.systemd1.Manager")]
     interface Manager : GLib.DBusProxy
@@ -43,9 +43,9 @@ namespace Systemd
 
 namespace Logind
 {
-    public static const string bus_name = "org.freedesktop.login1";
-    public static const string object_path = "/org/freedesktop/login1";
-    public static const string self_user_path = "/org/freedesktop/login1/user/self";
+    public const string bus_name = "org.freedesktop.login1";
+    public const string object_path = "/org/freedesktop/login1";
+    public const string self_user_path = "/org/freedesktop/login1/user/self";
 
     [DBus (name = "org.freedesktop.login1.Manager")]
     interface Manager : GLib.DBusProxy

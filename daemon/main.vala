@@ -19,8 +19,8 @@
 
 namespace SessionNanny
 {
-    public static const string bus_name = "net.sardemff7.SessionNanny";
-    public static const string object_path = "/net/sardemff7/SessionNanny";
+    public const string bus_name = "net.sardemff7.SessionNanny";
+    public const string object_path = "/net/sardemff7/SessionNanny";
 
     class Session : Object
     {

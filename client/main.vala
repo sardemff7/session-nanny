@@ -19,8 +19,8 @@
 
 namespace Logind
 {
-    public static const string bus_name = "org.freedesktop.login1";
-    public static const string object_path = "/org/freedesktop/login1";
+    public const string bus_name = "org.freedesktop.login1";
+    public const string object_path = "/org/freedesktop/login1";
 
     [DBus (name = "org.freedesktop.login1.Manager")]
     interface Manager : GLib.DBusProxy
@@ -31,8 +31,8 @@ namespace Logind
 
 namespace SessionNanny
 {
-    public static const string bus_name = "net.sardemff7.SessionNanny";
-    public static const string object_path = "/net/sardemff7/SessionNanny";
+    public const string bus_name = "net.sardemff7.SessionNanny";
+    public const string object_path = "/net/sardemff7/SessionNanny";
 
     [DBus (name = "net.sardemff7.SessionNanny")]
     interface Nanny : GLib.Object
@@ -54,7 +54,7 @@ namespace SessionNanny
         }
         private static bool display = false;
         private static bool show_version = false;
-        private static const GLib.OptionEntry[] options = {
+        private const GLib.OptionEntry[] options = {
                 { "display", 'd', 0, GLib.OptionArg.NONE, ref display, "Display sessions", null },
                 { "version", 'V', 0, GLib.OptionArg.NONE, ref show_version, "Print version", null },
                 { null }
