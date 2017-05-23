@@ -23,9 +23,7 @@ namespace SessionNanny
     namespace Config
     {
         public const string GETTEXT_PACKAGE;
-        public const string PACKAGE;
         public const string PACKAGE_NAME;
         public const string PACKAGE_VERSION;
-        public const string VERSION;
 }
 }
