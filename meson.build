@@ -1,7 +1,7 @@
 project('session-nanny', 'c', 'vala',
     version: '1',
     meson_version: '>=0.39.1',
-    license: [ 'GPL3+', 'LGPL3+', 'MIT' ],
+    license: [ 'GPL3+' ],
     default_options: [
         'c_std=gnu11',
         'warning_level=2',
