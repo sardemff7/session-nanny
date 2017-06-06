@@ -58,18 +58,18 @@ namespace Logind
     interface User : GLib.DBusProxy
     {
         [DBus (name = "Linger")]
-        public abstract bool linger { get; private set; }
+        public abstract bool linger { get; protected set; }
     }
 
     [DBus (name = "org.freedesktop.login1.Session")]
     public interface Session : GLib.DBusProxy
     {
-        public abstract string id { owned get; private set; }
+        public abstract string id { owned get; protected set; }
         [DBus (signature = "(uo)")]
-        public abstract GLib.Variant user { owned get; private set; }
+        public abstract GLib.Variant user { owned get; protected set; }
         [DBus (name = "Name")]
-        public abstract string name { owned get; private set; }
+        public abstract string name { owned get; protected set; }
         [DBus (name = "Active")]
-        public abstract bool active { get; private set; }
+        public abstract bool active { get; protected set; }
     }
 }
