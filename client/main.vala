@@ -166,6 +166,23 @@ namespace SessionNanny
                 foreach ( var @var in args[1:args.length] )
                     add_var(env, @var);
                 unowned string type = GLib.Environment.get_variable("SN_SESSION");
+                string type_ = null;
+                if ( type == null )
+                {
+                    unowned string tty = GLib.Environment.get_variable("TTY");
+                    unowned string term = GLib.Environment.get_variable("TERM");
+                    if ( GLib.Environment.get_variable("WAYLAND_DISPLAY") != null )
+                        type = "wayland";
+                    else if ( GLib.Environment.get_variable("DISPLAY") != null )
+                        type = "x11";
+                    else if ( ( tty != null ) && ( term != null ) )
+                    {
+                        type_ = "%s-%s".printf(tty, term);
+                        type = type_;
+                    }
+                    else
+                        type = "unknown";
+                }
                 nanny.update_environment(session_path, type, env);
             }
             catch ( GLib.IOError e )
